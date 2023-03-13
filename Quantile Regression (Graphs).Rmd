@@ -1,0 +1,638 @@
+Install Packages
+```{r}
+library(dplyr)
+library(quantreg)
+library(utils)
+library(writexl)
+library(ggplot2)
+library(gridExtra)
+library(grid)
+```
+Loading arid and mesic data
+```{r}
+Final_Arid <- read.csv("Final_Arid.csv")
+Final_Mesic <-read.csv("Final_Mesic.csv")
+```
+
+Running latitude quantile regression for Acacia Abrupta to find its p-value to determine sig contraction and expansion responses.
+```{r}
+species_list_arid <- unique(Final_Arid$Species)
+
+i_a = 1
+
+species_list_arid[i_a]
+
+df_temp_a <- Final_Arid %>% filter(Species == species_list_arid[i_a])
+
+fit_a <- lm(decimalLatitude ~year, data= df_temp_a)
+
+quantiles_05 <- rq(fit_a, tau = c(0.05)) %>% summary(se="boot")
+
+quantiles_95 <- rq(fit_a, tau = c(0.95)) %>% summary(se="boot")
+
+#Create statistics for lower quantile (5th) to plot
+
+qrpv05<-  data.frame(species=species_list_arid[i_a], tau=  quantiles_05[["tau"]],
+                    y0= coef(quantiles_05)[1],
+                    slope=coef(quantiles_05)[2],
+                    slope_pv= coef(quantiles_05)[8],
+                    slope_sig = coef(quantiles_05)[8]<0.05)
+
+#Create statistics for upper quantile (95th) to plot
+
+qrpv95<-  data.frame(species=species_list_arid[i_a], tau=  quantiles_05[["tau"]],
+                     y0= coef(quantiles_95)[1],
+                     slope=coef(quantiles_95)[2],
+                     slope_pv= coef(quantiles_95)[8],
+                     slope_sig = coef(quantiles_95)[8]<0.05)
+
+ quant_lat <- rbind(qrpv05, qrpv95)
+```
+Running latitude quantile regression for ALL arid species to find their respective p-values to determine sig contraction and expansion responses.
+```{r}
+quant_lat = c()
+
+for (i_a in 1:80) { #loop for species 1 to 80
+
+species_list_arid <- unique(Final_Arid$Species)
+
+i_a = 1
+
+species_list_arid[i_a]
+
+df_temp_a <- Final_Arid %>% filter(Species == species_list_arid[i_a])
+
+fit_a <- lm(decimalLatitude ~year, data= df_temp_a)
+
+quantiles_05 <- rq(fit_a, tau = c(0.05)) %>% summary(se="boot")
+
+quantiles_95 <- rq(fit_a, tau = c(0.95)) %>% summary(se="boot")
+
+#Create statistics for lower quantile (5th) to plot
+
+qrpv05<-  data.frame(species=species_list_arid[i_a], tau=  quantiles_05[["tau"]],
+                    y0= coef(quantiles_05)[1],
+                    slope=coef(quantiles_05)[2],
+                    slope_pv= coef(quantiles_05)[8],
+                    slope_sig = coef(quantiles_05)[8]<0.05)
+
+#Create statistics for upper quantile (95th) to plot
+
+qrpv95<-  data.frame(species=species_list_arid[i_a], tau=  quantiles_05[["tau"]],
+                     y0= coef(quantiles_95)[1],
+                     slope=coef(quantiles_95)[2],
+                     slope_pv= coef(quantiles_95)[8],
+                     slope_sig = coef(quantiles_95)[8]<0.05)
+
+  quant_prel <- bind_rows(qrpv05, qrpv95)
+  quant_lat <- bind_rows(quant_lat, quant_prel)
+}
+```
+Latitude quantile regression for individual arid species
+```{r}
+Lat1 <- filter(Final_Arid, Species =="Acacia abrupta") %>%
+  rq(decimalLatitude ~ year, tau=c(.05,0.95),.)
+
+Lat1df<- data.frame(cbind(y=Lat1[["y"]],
+                      x=Lat1[["x"]][,2],
+                        n.05=Lat1[["fitted.values"]][,1], 
+                      n95=Lat1[["fitted.values"]][,2]))
+
+ggplot(data=df_temp_a, aes(x=year, y=decimalLatitude))+
+    geom_point(size = 3.5)+
+     coord_cartesian(xlim = c(1915, 2022), ylim = c(-35, -20)) + 
+    geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2], 
+                    linetype=qrpv95$slope_sig), col = "dark orange", size = 1)+
+    geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2], 
+                    linetype=qrpv05$slope_sig), col = "dark orange", size = 1)+
+    scale_linetype_manual(values = c("FALSE" = "dashed", "TRUE" = "solid"))+
+    labs(x="", y="")+
+    theme_classic()+
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank())+
+    theme(legend.position = "none",
+          axis.text.x = element_text(size =22),
+          axis.text.y = element_text(size =22),
+          plot.title = element_text(size=25))
+  
+  summary(Lat1, se = "boot")
+```
+Running latitude quantile regression for Acacia Abrupta (Arid - Euan) to find its p-value to determine sig contraction and expansion responses.
+```{r}
+spp = unique(Final_Arid$Species)
+
+spp_species_plots = list()
+
+for(species in spp) {
+
+  df_temp_a <- Final_Arid %>% filter(Species == species) #filter DataFrame by your study species
+
+  fit_a <- lm(decimalLatitude ~year, data= df_temp_a)
+
+  quantiles_05 <- rq(fit_a, tau = c(0.05)) %>% summary(se="boot")  #we need to bootstrap for a p-value
+  quantiles_95 <- rq(fit_a, tau = c(0.95)) %>% summary(se="boot")
+
+  qrpv05<-  data.frame(species=species,
+                       tau=  quantiles_05[["tau"]],
+                       y0= coef(quantiles_05)[1],
+                       slope=coef(quantiles_05)[2],
+                       slope_pv= coef(quantiles_05)[8],
+                       slope_sig = coef(quantiles_05)[8]<0.05)
+
+  qrpv95<-  data.frame(species=species,
+                       tau=  quantiles_95[["tau"]],
+                       y0= coef(quantiles_95)[1],
+                       slope=coef(quantiles_95)[2],
+                       slope_pv= coef(quantiles_95)[8],
+                       slope_sig = coef(quantiles_95)[8]<0.05)
+
+  spp_species_plots[[species]] = ggplot(data=df_temp_a,
+                                        aes(year, decimalLatitude)) +
+    geom_point(size = 3.5)+
+    coord_cartesian(xlim = c(1915, 2022), ylim = c(-35, -20)) +
+    geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2],
+                    linetype=qrpv95$slope_sig), col = "dark orange", size = 1)+
+    geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2],
+                    linetype=qrpv05$slope_sig), col = "dark orange", size = 1)+
+    scale_linetype_manual(values = c("FALSE" = "dashed", "TRUE" = "solid"))+
+    labs(x="", y="")+
+    theme_classic()+
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())+
+    theme(legend.position = "none",
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank(),
+          plot.title = element_text(size=25))+
+    ggtitle(species)
+
+  print(spp_species_plots[[species]])
+
+ggsave(spp_species_plots[[species]],
+      file=paste0("Lat_Arid_quantreg", species,".pdf"),
+      width = 15, height = 10, units = "cm", dpi=300)
+}
+```
+Running longitude quantile regression for ALL arid species to find their respective p-values to determine sig contraction and expansion responses.
+```{r}
+species_list_arid <- unique(Final_Arid$Species)
+
+i_a = 1
+
+species_list_arid[i_a]
+
+df_temp_a <- Final_Arid %>% filter(Species == species_list_arid[i_a])
+
+fit_a <- lm(decimalLongitude ~year, data= df_temp_a)
+
+quantiles_05 <- rq(fit_a, tau = c(0.05)) %>% summary(se="boot")
+
+quantiles_95 <- rq(fit_a, tau = c(0.95)) %>% summary(se="boot")
+
+#Create statistics for lower quantile (5th) to plot
+
+qrpv05<-  data.frame(species=species_list_arid[i_a], tau=  quantiles_05[["tau"]],
+                    y0= coef(quantiles_05)[1],
+                    slope=coef(quantiles_05)[2],
+                    slope_pv= coef(quantiles_05)[8],
+                    slope_sig = coef(quantiles_05)[8]<0.05)
+
+#Create statistics for upper quantile (95th) to plot
+
+qrpv95<-  data.frame(species=species_list_arid[i_a], tau=  quantiles_05[["tau"]],
+                     y0= coef(quantiles_95)[1],
+                     slope=coef(quantiles_95)[2],
+                     slope_pv= coef(quantiles_95)[8],
+                     slope_sig = coef(quantiles_95)[8]<0.05)
+
+ quant_lon <- rbind(qrpv05, qrpv95)
+```
+Create quantile longitude regression graph for all arid plants
+```{r}
+quant_lon = c()
+
+for (i_a in 1:80) { #loop for species 1 to 80
+  
+  species_list_arid[i_a] # check what this species is for funsies
+  
+  df_temp_a <- Final_Arid %>% filter(Species == species_list_arid[i_a]) #filter DataFrame by your study species
+  
+  fit_a <- lm(decimalLongitude ~year, data= df_temp_a)
+  
+  quantiles_05 <- rq(fit_a, tau = c(0.05)) %>% summary(se="boot")
+  quantiles_95 <- rq(fit_a, tau = c(0.95)) %>% summary(se="boot")
+  
+  qrpv05<-  data.frame(species=species_list_arid[i_a], 
+                       tau=  quantiles_05[["tau"]],
+                       y0= coef(quantiles_05)[1],
+                       slope=coef(quantiles_05)[2],
+                       slope_pv= coef(quantiles_05)[8],
+                       slope_sig = coef(quantiles_05)[8]<0.05)
+  
+  qrpv95<-  data.frame(species=species_list_arid[i_a], 
+                       tau=  quantiles_95[["tau"]],
+                       y0= coef(quantiles_95)[1],
+                       slope=coef(quantiles_95)[2],
+                       slope_pv= coef(quantiles_95)[8],
+                       slope_sig = coef(quantiles_95)[8]<0.05)
+
+  quant_prel <- bind_rows(qrpv05, qrpv95)
+  quant_lon <- bind_rows(quant_lon, quant_prel)
+}
+```
+Longitude quantile regression for arid individual species
+```{r}
+Lon1 <- filter(Final_Arid, Species =="Acacia abrupta") %>%
+  rq(decimalLongitude ~ year, tau=c(.05,0.95),.)
+
+Lon1df<- data.frame(cbind(y=Lon1[["y"]],
+                      x=Lon1[["x"]][,2],
+                        n.05=Lon1[["fitted.values"]][,1], 
+                      n95=Lon1[["fitted.values"]][,2]))
+
+ ggplot(data=df_temp_a, aes(x=year, y=decimalLongitude))+
+    geom_point(size = 3.5)+
+   geom_smooth(method = "lm", se = FALSE)+
+     coord_cartesian(xlim = c(1915, 2022), ylim = c(110, 150)) + 
+    geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2], 
+                    linetype=qrpv95$slope_sig), col = "dark orange", size = 1)+
+    geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2], 
+                    linetype=qrpv05$slope_sig), col = "dark orange", size = 1)+
+    scale_linetype_manual(values = c("FALSE" = "dashed", "TRUE" = "solid"))+
+    labs(x="", y="")+
+    theme_classic()+
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank())+
+    theme(legend.position = "none",
+          axis.text.x = element_text(size =22),
+          axis.text.y = element_text(size =22),
+          plot.title = element_text(size=25))+
+   ggtitle(species)
+ 
+  summary(Lon1, se = "boot")
+```
+Longitude quantile regression for ALL arid species
+```{r}
+spp = unique(Final_Arid$Species)
+
+spp_species_plots = list()
+
+for(species in spp) {
+
+  df_temp_a <- Final_Arid %>% filter(Species == species) #filter DataFrame by your study species
+
+  fit_a <- lm(decimalLongitude ~year, data= df_temp_a)
+
+  quantiles_05 <- rq(fit_a, tau = c(0.05)) %>% summary(se="boot")  #we need to bootstrap for a p-value
+  quantiles_95 <- rq(fit_a, tau = c(0.95)) %>% summary(se="boot")
+
+  qrpv05<-  data.frame(species=species,
+                       tau=  quantiles_05[["tau"]],
+                       y0= coef(quantiles_05)[1],
+                       slope=coef(quantiles_05)[2],
+                       slope_pv= coef(quantiles_05)[8],
+                       slope_sig = coef(quantiles_05)[8]<0.05)
+
+  qrpv95<-  data.frame(species=species,
+                       tau=  quantiles_95[["tau"]],
+                       y0= coef(quantiles_95)[1],
+                       slope=coef(quantiles_95)[2],
+                       slope_pv= coef(quantiles_95)[8],
+                       slope_sig = coef(quantiles_95)[8]<0.05)
+
+  spp_species_plots[[species]] = ggplot(data=df_temp_a,
+                                        aes(year, decimalLongitude)) +
+    geom_point(size = 3.5)+
+    coord_cartesian(xlim = c(1915, 2022), ylim = c(110, 150)) +
+    geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2],
+                    linetype=qrpv95$slope_sig), col = "dark orange", size = 1)+
+    geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2],
+                    linetype=qrpv05$slope_sig), col = "dark orange", size = 1)+
+    scale_linetype_manual(values = c("FALSE" = "dashed", "TRUE" = "solid"))+
+    labs(x="", y="")+
+    theme_classic()+
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())+
+    theme(legend.position = "none",
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank(),
+          plot.title = element_text(size=25))+
+    ggtitle(species)
+
+  print(spp_species_plots[[species]])
+  
+  ggsave(spp_species_plots[[species]],
+         file=paste0("Lon_Arid_quantreg", species,".png"),
+         width = 20, height = 15, units = "cm", dpi=300)
+}
+```
+Create quantile latitude regression graph for first mesic plant
+```{r}
+species_list_mesic <- unique(Final_Mesic$Species)
+
+i_m = 1
+
+species_list_mesic[i_m]
+
+df_temp_m <- Final_Mesic %>% filter(Species == species_list_mesic[i_m])
+
+fit_m <- lm(decimalLatitude ~year, data= df_temp_m)
+
+quantiles_05 <- rq(fit_m, tau = c(0.05)) %>% summary(se="boot")
+
+quantiles_95 <- rq(fit_m, tau = c(0.95)) %>% summary(se="boot")
+
+#Create statistics for lower quantile (5th) to plot
+
+qrpv05m<-  data.frame(species=species_list_mesic[i_m], tau=  quantiles_05[["tau"]],
+                    y0= coef(quantiles_05)[1],
+                    slope=coef(quantiles_05)[2],
+                    slope_pv= coef(quantiles_05)[8],
+                    slope_sig = coef(quantiles_05)[8]<0.05)
+
+#Create statistics for upper quantile (95th) to plot
+
+qrpv95m<-  data.frame(species=species_list_mesic[i_m], tau=  quantiles_05[["tau"]],
+                     y0= coef(quantiles_95)[1],
+                     slope=coef(quantiles_95)[2],
+                     slope_pv= coef(quantiles_95)[8],
+                     slope_sig = coef(quantiles_95)[8]<0.05)
+
+ quant_lat_m <- rbind(qrpv05m, qrpv95m)
+```
+Create quantile latitude regression graph for all mesic plants
+```{r}
+quant_lat_m = c()
+
+for (i_m in 1:76) { #loop for species 1 to 76
+  
+  species_list_mesic[i_m] # check what this species is for funsies
+  
+  df_temp_m <- Final_Mesic %>% filter(Species == species_list_mesic[i_m]) #filter DataFrame by your study species
+  
+  fit_m <- lm(decimalLatitude ~year, data= df_temp_m)
+  
+  quantiles_05 <- rq(fit_m, tau = c(0.05)) %>% summary(se="boot")
+  quantiles_95 <- rq(fit_m, tau = c(0.95)) %>% summary(se="boot")
+  
+  qrpv05m<-  data.frame(species=species_list_mesic[i_m], 
+                       tau=  quantiles_05[["tau"]],
+                       y0= coef(quantiles_05)[1],
+                       slope=coef(quantiles_05)[2],
+                       slope_pv= coef(quantiles_05)[8],
+                       slope_sig = coef(quantiles_05)[8]<0.05)
+  
+  qrpv95m<-  data.frame(species=species_list_mesic[i_m], 
+                       tau=  quantiles_95[["tau"]],
+                       y0= coef(quantiles_95)[1],
+                       slope=coef(quantiles_95)[2],
+                       slope_pv= coef(quantiles_95)[8],
+                       slope_sig = coef(quantiles_95)[8]<0.05)
+
+  quant_prel_m <- bind_rows(qrpv05m, qrpv95m)
+  quant_lat_m <- bind_rows(quant_lat_m, quant_prel_m)
+}
+```
+Create quantile latitude regression graph for individual mesic species
+```{r}
+Lat1m <- filter(Final_Mesic, Species =="Acacia baeuerlenii") %>%
+  rq(decimalLatitude ~ year, tau=c(.05,0.95),.)
+
+Lat1dfm<- data.frame(cbind(y=Lat1m[["y"]],
+                      x=Lat1m[["x"]][,2],
+                        n.05=Lat1m[["fitted.values"]][,1], 
+                      n95=Lat1m[["fitted.values"]][,2]))
+
+  ggplot(data=df_temp_m, aes(x=year, y=decimalLatitude))+
+    geom_point(size = 3.5)+
+     coord_cartesian(xlim = c(1896, 2022), ylim = c(-35, -20)) + 
+    geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2], 
+                    linetype=qrpv95m$slope_sig), col = "blue", size = 1)+
+    geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2], 
+                    linetype=qrpv05m$slope_sig), col = "blue", size = 1)+
+    scale_linetype_manual(values = c("FALSE" = "dashed", "TRUE" = "solid"))+
+    labs(x="", y="")+
+    theme_classic()+
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank())+
+    theme(legend.position = "none",
+          axis.text.x = element_text(size =22),
+          axis.text.y = element_text(size =22),
+          plot.title = element_text(size=25))
+  
+  summary(Lat1m, se = "boot")
+```
+Create quantile latitude regression graph for all mesic species
+```{r}
+spp = unique(Final_Mesic$Species)
+
+spp_species_plots = list()
+
+for(species in spp) {
+
+  df_temp_m <- Final_Mesic %>% filter(Species == species) #filter DataFrame by your study species
+
+  fit_m <- lm(decimalLatitude ~year, data= df_temp_m)
+
+  quantiles_05 <- rq(fit_m, tau = c(0.05)) %>% summary(se="boot")  #we need to bootstrap for a p-value
+  quantiles_95 <- rq(fit_m, tau = c(0.95)) %>% summary(se="boot")
+
+  qrpv05m<-  data.frame(species=species,
+                       tau=  quantiles_05[["tau"]],
+                       y0= coef(quantiles_05)[1],
+                       slope=coef(quantiles_05)[2],
+                       slope_pv= coef(quantiles_05)[8],
+                       slope_sig = coef(quantiles_05)[8]<0.05)
+
+  qrpv95m<-  data.frame(species=species,
+                       tau=  quantiles_95[["tau"]],
+                       y0= coef(quantiles_95)[1],
+                       slope=coef(quantiles_95)[2],
+                       slope_pv= coef(quantiles_95)[8],
+                       slope_sig = coef(quantiles_95)[8]<0.05)
+
+  spp_species_plots[[species]] = ggplot(data=df_temp_m,
+                                        aes(year, decimalLatitude)) +
+    geom_point(size = 3.5)+
+    geom_smooth(method = "lm", se = FALSE)+
+    coord_cartesian(xlim = c(1895, 2025), ylim = c(-35, -20)) +
+    geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2],
+                    linetype=qrpv95m$slope_sig), col = "blue", size = 1)+
+    geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2],
+                    linetype=qrpv05m$slope_sig), col = "blue", size = 1)+
+    scale_linetype_manual(values = c("FALSE" = "dashed", "TRUE" = "solid"))+
+    labs(x="", y="")+
+    theme_classic()+
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())+
+    theme(legend.position = "none",
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank(),
+          plot.title = element_text(size=25))+
+    ggtitle(species)
+
+  print(spp_species_plots[[species]])
+  
+  #ggsave(spp_species_plots[[species]],
+        # file=paste0("Lat_mesic_quantreg", species,".png"),
+        # width = 15, height = 10, units = "cm", dpi=300)
+}
+```
+Create quantile longitude regression graph for first mesic plant
+```{r}
+species_list_mesic <- unique(Final_Mesic$Species)
+
+i_m = 1
+
+species_list_mesic[i_m]
+
+df_temp_m <- Final_Mesic %>% filter(Species == species_list_mesic[i_m])
+
+fit_m <- lm(decimalLongitude ~year, data= df_temp_m)
+
+quantiles_05 <- rq(fit_m, tau = c(0.05)) %>% summary(se="boot")
+
+quantiles_95 <- rq(fit_m, tau = c(0.95)) %>% summary(se="boot")
+
+#Create statistics for lower quantile (5th) to plot
+
+qrpv05m<-  data.frame(species=species_list_mesic[i_m], tau=  quantiles_05[["tau"]],
+                    y0= coef(quantiles_05)[1],
+                    slope=coef(quantiles_05)[2],
+                    slope_pv= coef(quantiles_05)[8],
+                    slope_sig = coef(quantiles_05)[8]<0.05)
+
+#Create statistics for upper quantile (95th) to plot
+
+qrpv95m<-  data.frame(species=species_list_mesic[i_m], tau=  quantiles_05[["tau"]],
+                     y0= coef(quantiles_95)[1],
+                     slope=coef(quantiles_95)[2],
+                     slope_pv= coef(quantiles_95)[8],
+                     slope_sig = coef(quantiles_95)[8]<0.05)
+
+ quant_lon_m <- rbind(qrpv05m, qrpv95m)
+```
+Create quantile longitude regression graph for all mesic plants
+```{r}
+quant_lon_m = c()
+
+for (i_m in 1:76) { #loop for species 1 to 40
+  
+  species_list_mesic[i_m] # check what this species is for funsies
+  
+  df_temp_m <- Final_Mesic %>% filter(Species == species_list_mesic[i_m]) #filter DataFrame by your study species
+  
+  fit_m <- lm(decimalLongitude ~year, data= df_temp_m)
+  
+  quantiles_05 <- rq(fit_m, tau = c(0.05)) %>% summary(se="boot")
+  quantiles_95 <- rq(fit_m, tau = c(0.95)) %>% summary(se="boot")
+  
+  qrpv05m<-  data.frame(species=species_list_mesic[i_m], 
+                       tau=  quantiles_05[["tau"]],
+                       y0= coef(quantiles_05)[1],
+                       slope=coef(quantiles_05)[2],
+                       slope_pv= coef(quantiles_05)[8],
+                       slope_sig = coef(quantiles_05)[8]<0.05)
+  
+  qrpv95m<-  data.frame(species=species_list_mesic[i_m], 
+                       tau=  quantiles_95[["tau"]],
+                       y0= coef(quantiles_95)[1],
+                       slope=coef(quantiles_95)[2],
+                       slope_pv= coef(quantiles_95)[8],
+                       slope_sig = coef(quantiles_95)[8]<0.05)
+
+  quant_prel_m <- bind_rows(qrpv05m, qrpv95m)
+  quant_lon_m <- bind_rows(quant_lon_m, quant_prel_m)
+}
+```
+Create quantile longitude regression graph for individual mesic species
+```{r}
+Lat1m <- filter(Final_Mesic, Species =="Acacia baeuerlenii") %>%
+  rq(decimalLongitude ~ year, tau=c(.05,0.95),.)
+
+Lat1dfm<- data.frame(cbind(y=Lat1m[["y"]],
+                      x=Lat1m[["x"]][,2],
+                        n.05=Lat1m[["fitted.values"]][,1], 
+                      n95=Lat1m[["fitted.values"]][,2]))
+
+  ggplot(data=df_temp_m, aes(x=year, y=decimalLongitude))+
+    geom_point(size = 3.5)+
+     coord_cartesian(xlim = c(1915, 2022), ylim = c(145, 155)) + 
+    geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2], 
+                    linetype=qrpv95m$slope_sig), col = "blue", size = 1)+
+    geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2], 
+                    linetype=qrpv05m$slope_sig), col = "blue", size = 1)+
+    scale_linetype_manual(values = c("FALSE" = "dashed", "TRUE" = "solid"))+
+    labs(x="", y="")+
+    theme_classic()+
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank())+
+    theme(legend.position = "none",
+          axis.text.x = element_text(size =22),
+          axis.text.y = element_text(size =22),
+          plot.title = element_text(size=25))+
+    ggtitle(species)
+  
+    print(spp_species_plots[[species]])
+  
+  ggsave(spp_species_plots[[species]],
+         file=paste0("Lon_Mesic_quantreg", species,".png"),
+         width = 20, height = 15, units = "cm", dpi=300)
+  
+  summary(Lat1m, se = "boot")
+```
+Create quantile longitude regression graph for all mesic species
+```{r}
+spp = unique(Final_Mesic$Species)
+
+spp_species_plots = list()
+
+for(species in spp) {
+
+  df_temp_m <- Final_Mesic %>% filter(Species == species) #filter DataFrame by your study species
+
+  fit_m <- lm(decimalLongitude ~year, data= df_temp_m)
+
+  quantiles_05 <- rq(fit_m, tau = c(0.05)) %>% summary(se="boot")  #we need to bootstrap for a p-value
+  quantiles_95 <- rq(fit_m, tau = c(0.95)) %>% summary(se="boot")
+
+  qrpv05m<-  data.frame(species=species,
+                       tau=  quantiles_05[["tau"]],
+                       y0= coef(quantiles_05)[1],
+                       slope=coef(quantiles_05)[2],
+                       slope_pv= coef(quantiles_05)[8],
+                       slope_sig = coef(quantiles_05)[8]<0.05)
+
+  qrpv95m<-  data.frame(species=species,
+                       tau=  quantiles_95[["tau"]],
+                       y0= coef(quantiles_95)[1],
+                       slope=coef(quantiles_95)[2],
+                       slope_pv= coef(quantiles_95)[8],
+                       slope_sig = coef(quantiles_95)[8]<0.05)
+
+  spp_species_plots[[species]] = ggplot(data=df_temp_m,
+                                        aes(year, decimalLongitude)) +
+    geom_point(size = 3.5)+
+    geom_smooth(method = "lm", se = FALSE)+
+    coord_cartesian(xlim = c(1895, 2025), ylim = c(145, 155)) +
+    geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2],
+                    linetype=qrpv95m$slope_sig), col = "blue", size = 1)+
+    geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2],
+                    linetype=qrpv05m$slope_sig), col = "blue", size = 1)+
+    scale_linetype_manual(values = c("FALSE" = "dashed", "TRUE" = "solid"))+
+    labs(x="", y="")+
+    theme_classic()+
+    theme(panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())+
+    theme(legend.position = "none",
+          axis.text.x = element_blank(),
+          axis.text.y = element_blank(),
+          plot.title = element_text(size=25))+
+    ggtitle(species)
+
+  print(spp_species_plots[[species]])
+  
+  ggsave(spp_species_plots[[species]],
+         file=paste0("Lon_mesic_quantreg", species,".png"),
+         width = 20, height = 15, units = "cm", dpi=300)
+}
+```

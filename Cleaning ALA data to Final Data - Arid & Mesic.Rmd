@@ -1,0 +1,51 @@
+---
+title: "Cleaning ALA data to Final Data - Arid & Mesic"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+Installing packages
+```{r}
+library(writexl)
+library(dplyr)
+```
+Reading in mesic and arid species data downloaded from Atlas of Living Australia
+```{r}
+Mesic_data <- read.csv("Final_Mesic.csv")
+Arid_data <-read.csv("Final_Arid.csv")
+```
+Filtering out data with uncertainity >3001, no year, species name, latitude or longitude values
+```{r}
+Mesic_data <- Mesic_data %>%
+  filter(!is.na(year) & !is.na(species) & !is.na(decimalLatitude) & !is.na(decimalLongitude)) %>% #excluding data points without a year, species, coordinates
+  filter(coordinateUncertaintyInMeters <= 3001) %>% mutate(abs_lat=abs(decimalLatitude)) %>%
+  mutate(abs_lon=abs(decimalLongitude))
+
+Arid_data <- Arid_data %>%
+  filter(!is.na(year) & !is.na(Species) & !is.na(decimalLatitude) & !is.na(decimalLongitude)) %>% #excluding data points without a year, species, coordinates
+  filter(coordinateUncertaintyInMeters <= 3001) %>% mutate(abs_lat=abs(decimalLatitude)) %>%
+  mutate(abs_lon=abs(decimalLongitude))
+```
+Adding columns for min and max latitude and longitude and filtering out species that exist beyond the latitudinal and longitudinal boundaries
+```{r}
+filtered_mesic = Mesic_data %>% group_by(species) %>%
+  summarise(max_lat=max(abs_lat),
+            min_lat=min(abs_lat),
+            max_lon=max(abs_lon),
+            min_lon=min(abs_lon)) %>% dplyr::filter(min_lat >= 19.21 &  max_lat <= 31.66 & min_lon >= 147.46 &  max_lon <= 153.94)
+
+filtered_arid = Arid_data %>% group_by(Species) %>%
+  summarise(max_lat=max(abs_lat),
+            min_lat=min(abs_lat),
+            max_lon=max(abs_lon),
+            min_lon=min(abs_lon)) %>% dplyr::filter(min_lat >= 19.21 &  max_lat <= 31.66 & min_lon >= 115.62 &  max_lon <= 143.15)
+
+```
+Creating csv of species list data
+```{r}
+write_xlsx(filtered_mesic, "/Users/Euan/Desktop/Honours/Historic data/Final_Mesic_List.csv")
+
+write_xlsx(filtered_arid, "/Users/Euan/Desktop/Honours/Historic data/Final_Arid_List.csv")
+```

@@ -1,0 +1,92 @@
+#set wd
+
+setwd("~/Desktop/Honours/Historic data")
+
+#install relevant packages for scatterplot
+
+install.packages("tidyverse")
+library(tidyverse)
+
+install.packages("dplyr", dependencies = TRUE)
+library(dplyr)
+
+install.packages("https://cran.r-project.org/src/contrib/Archive/rlang/rlang_1.0.0.tar.gz", repo=NULL, type="source")
+library(rlang)
+
+install.packages("ggplot")
+library(ggplot2)
+
+install.packages("metafor")
+library(metafor)
+
+install.packages("emmeans")
+library(emmeans)
+
+#import data
+
+Morphology <- read.csv("Arid_Morphology.csv", stringsAsFactors=FALSE, fileEncoding="latin1")
+
+#Log translate then transform height and weight data
+
+Morphology <- mutate(Morphology, LogHeight = log10(Maximum_Height_In_Meters+1))#+1 to translate neg values into pos
+                     
+Morphology <- mutate(Morphology, LogWeight = log10(Mean_1000_Seed_Weight+1))#+1 to translate neg values into pos
+
+#Log transform range size and range shift data
+
+Morphology <- Morphology %>% mutate(LogRangeShift = log10(RangeShift_Km_Per_Year+1))
+
+Morphology <- Morphology %>% mutate(LogRangeSize = log10(Extent_Of_Occurence_Km2))
+
+#Create scatterplot of height vs range shift
+
+ggplot(Morphology, aes(x=Maximum_Height_In_Meters, y = RangeShift_Km_Per_Year)) + geom_point() + scale_x_continuous(trans= 'log10') + scale_y_continuous(trans= 'log10') + xlab("Maximum Height of Species (m) [Log Scale]") + ylab("Mean Rate of Range Shift (km/year) [Log Scale]") +theme_classic()+theme(panel.grid = element_blank()) #Height vs Lat shift
+
+#Create scatterplot of seed weight vs range
+
+ggplot(Morphology, aes(x=Mean_1000_Seed_Weight, y = RangeShift_Km_Per_Year)) + geom_point() + scale_x_continuous(trans= 'log10') + scale_y_continuous(trans= 'log10')+ xlab(" Mean 1000 Seed Weight (g) [Log Scale]") + ylab("Mean Rate of Range Shift (km/year) [Log Scale]") +theme_classic()+theme(panel.grid = element_blank()) #Weight vs Range shift
+
+#Determine significance and p-values for height vs shift data
+
+Height_Range <- lm(LogHeight ~ LogRangeShift, data = Morphology)
+
+summary(Height_Range)
+
+#Determine significance and p-values for weight vs shift data
+
+Weight_Range <- lm(LogWeight ~ log(RangeShift_Km_Per_Year), data = Morphology)
+
+summary(Weight_Range)
+
+#Create violin plot of dispersal mode vs lat, long and range shift
+
+ggplot(Morphology, aes(x = Dispersal_Trait, y = RangeShift_Km_Per_Year)) + scale_y_continuous(trans= 'log10') + geom_boxplot(fill = "lightblue", colour = "darkblue") + xlab ("Disperal Trait") + ylab( "Mean Rate of Range Shift (km/year) [Log Scale]") + theme_classic() + theme(panel.grid = element_blank())
+
+violin_trait <- ggplot(Morphology, aes(Dispersal_Trait, RangeShift_Km_Per_Year)) +
+  scale_y_continuous(trans= 'log10') + 
+  geom_violin(aes(fill = Dispersal_Trait), show.legend = FALSE) +
+  labs(x="Dispersal Trait", y="Mean Rate of Range Shift (km/year) [Log Scale]") +
+  theme_bw() + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  scale_fill_brewer(palette = "Oranges")
+
+violin_trait + stat_summary(fun = mean, geom="point", shape=23, size=2, fill = "White")
+
+#Peform One-Way ANOVA
+
+Trait_glm <- glm((RangeShift_Km_Per_Year) ~ Dispersal_Trait-1, data = Morphology)
+
+summary(Trait_glm)
+
+plot(simulateResiduals(Trait_glm))
+
+emmeans(Trait_glm, pairwise ~ Dispersal_Trait)
+
+#create compact letter display for plot
+
+cld <-multcompLetters4(Trait_Anova, Traits_Tukey)
+
+print(cld)
+
+cld <- as.data.frame.list(cld$Dispersal_Trait)
+

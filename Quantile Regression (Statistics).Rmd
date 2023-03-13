@@ -1,0 +1,343 @@
+Install Packages
+```{r}
+#install.packages("dplyr", dependencies = TRUE)
+library(dplyr)
+remove.packages("rlang")
+#install_version("quantreg", "5.94")
+library(quantreg)
+#install.packages("tidyverse")
+library(utils)
+#install.packages("broom")
+library(broom)
+remove.packages("broom")
+#install.packages("writexl")
+library(writexl)
+```
+Loading arid and mesic data
+```{r}
+Final_Arid <- read.csv("Final_Arid.csv")
+Final_Mesic <-read.csv("Final_Mesic.csv")
+```
+Running latitude quantile regression for Acacia Abrupta to find its p-value to determine sig contraction and expansion responses.
+```{r}
+species_list_arid <- unique(Final_Arid$Species) #Produces a list of species
+
+i_a = 1 #Run for first species to troubleshoot
+
+species_list_arid[i_a] # Check the species name is correct
+
+df_temp_a <- Final_Arid %>% filter(Species == species_list_arid[i_a]) #filter DataFrame by the study species
+
+fit_a <- lm(decimalLatitude ~year, data= df_temp_a)
+
+quantiles_05 <- rq(fit_a, tau = c(0.05)) %>% summary(se="boot")
+
+quantiles_95 <- rq(fit_a, tau = c(0.95)) %>% summary(se="boot")
+
+
+ q0.5 <-  data.frame(species=species_list_arid[i_a], tau=  quantiles_05[["tau"]],
+                     y0= quantiles_05[["coefficients"]]["(Intercept)", "Value"],
+year_effect=  quantiles_05[["coefficients"]]["year", "Value"],
+year_SE=quantiles_05[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_05[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_05[["coefficients"]]["year", "Pr(>|t|)"] < 0.05) #check if the p val significant
+
+
+ q.95 <- data.frame(species=species_list_arid[i_a], tau=  quantiles_95[["tau"]],
+                                         y0= quantiles_95[["coefficients"]]["(Intercept)", "Value"],
+year_effect=  quantiles_95[["coefficients"]]["year", "Value"],
+year_SE=quantiles_95[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_95[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_95[["coefficients"]]["year", "Pr(>|t|)"] < 0.05) #check if the p val significant
+
+  quant_lat <- rbind(q0.5, q.95) %>% mutate(pv= if_else(year_pvalue>0.05, "dashed", "solid"))
+```
+Running latitude quantile regression for ALL arid species to find their respective p-values to determine sig contraction and expansion responses.
+```{r}
+quant_lat = c()
+
+for (i_a in 1:80) { #loop for species 1 to 80
+
+species_list_arid[i_a] 
+  
+df_temp_a <- Final_Arid %>% filter(Species == species_list_arid[i_a])
+
+fit_a <- lm(decimalLatitude ~year, data= df_temp_a)
+
+quantiles_05 <- rq(fit_a, tau = c(0.05)) %>% summary(se="boot")
+
+quantiles_95 <- rq(fit_a, tau = c(0.95)) %>% summary(se="boot")
+
+ q0.5 <-  data.frame(species=species_list_arid[i_a],tau=  quantiles_05[["tau"]],
+year_effect=  quantiles_05[["coefficients"]]["year", "Value"],
+year_SE=quantiles_05[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_05[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_05[["coefficients"]]["year", "Pr(>|t|)"] < 0.05)
+
+ q.95 <- data.frame(species=species_list_arid[i_a],tau=  quantiles_95[["tau"]],
+year_effect=  quantiles_95[["coefficients"]]["year", "Value"],
+year_SE=quantiles_95[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_95[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_95[["coefficients"]]["year", "Pr(>|t|)"] < 0.05)
+
+quant_prel <- bind_rows(q0.5, q.95)
+quant_lat <- bind_rows(quant_lat, quant_prel)
+}
+
+quant_lat #have a look at summary table
+
+print(quant_lat)
+
+write.csv(quant_lat, "/Users/Euan/Desktop/Honours/Historic data/quantiles_lat_arid.csv")
+```
+Longitude quantile regression for Acacia abrupta
+```{r}
+species_list_arid <- unique(Final_Arid$Species)
+
+i_a = 1 
+
+species_list_arid[i_a]
+
+df_temp_a <- Final_Arid %>% filter(Species == species_list_arid[i_a])
+
+fit_a_l <- lm(decimalLongitude ~year, data= df_temp_a)
+
+quantiles_05 <- rq(fit_a_l, tau = c(0.05)) %>% summary(se="boot")
+
+quantiles_95 <- rq(fit_a_l, tau = c(0.95)) %>% summary(se="boot")
+
+
+ q0.5 <-  data.frame(species=species_list_arid[i_a], tau=  quantiles_05[["tau"]],
+year_effect=  quantiles_05[["coefficients"]]["year", "Value"],
+year_SE=quantiles_05[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_05[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_05[["coefficients"]]["year", "Pr(>|t|)"] < 0.05)
+
+
+ q.95 <- data.frame(species=species_list_arid[i_a], tau=  quantiles_95[["tau"]],
+year_effect=  quantiles_95[["coefficients"]]["year", "Value"],
+year_SE=quantiles_95[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_95[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_95[["coefficients"]]["year", "Pr(>|t|)"] < 0.05)
+
+  quant_lon <- rbind(q0.5, q.95)
+```
+Longitude quantile regression for ALL arid species
+```{r}
+quant_lon = c()
+
+for (i_a in 1:80) {
+
+species_list_arid[i_a]
+  
+df_temp_a <- Final_Arid %>% filter(Species == species_list_arid[i_a])
+
+fit_a_l <- lm(decimalLongitude ~year, data= df_temp_a)
+
+quantiles_05 <- rq(fit_a_l, tau = c(0.05)) %>% summary(se="boot")
+
+quantiles_95 <- rq(fit_a_l, tau = c(0.95)) %>% summary(se="boot")
+
+ q0.5 <-  data.frame(species=species_list_arid[i_a],tau=  quantiles_05[["tau"]],
+year_effect=  quantiles_05[["coefficients"]]["year", "Value"],
+year_SE=quantiles_05[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_05[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_05[["coefficients"]]["year", "Pr(>|t|)"] < 0.05)
+
+ q.95 <- data.frame(species=species_list_arid[i_a],tau=  quantiles_95[["tau"]],
+year_effect=  quantiles_95[["coefficients"]]["year", "Value"],
+year_SE=quantiles_95[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_95[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_95[["coefficients"]]["year", "Pr(>|t|)"] < 0.05)
+
+quant_prel <- bind_rows(q0.5, q.95)
+quant_lon <- bind_rows(quant_lon, quant_prel)
+}
+
+quant_lon 
+
+print(quant_lon)
+
+write_xlsx(quant_lon, "/Users/Euan/Desktop/Honours/Historic data/quantiles_lon_arid.csv")
+```
+
+Running latitude quantile regression for Acacia baeu to find its p-value to determine sig contraction and expansion responses.
+```{r}
+species_list_mesic <- unique(Final_Mesic$Species) 
+
+i_m = 1 
+
+species_list_mesic[i_m] 
+
+df_temp_m <- Final_Mesic %>% filter(Species == species_list_mesic[i_m])
+
+fit_m <- lm(decimalLatitude ~year, data= df_temp_m)
+
+quantiles_05 <- rq(fit_m, tau = c(0.05)) %>% summary(se="boot")
+
+quantiles_95 <- rq(fit_m, tau = c(0.95)) %>% summary(se="boot")
+
+
+ q0.5_m <-  data.frame(species=species_list_mesic[i_m], tau=  quantiles_05[["tau"]],
+year_effect=  quantiles_05[["coefficients"]]["year", "Value"],
+year_SE=quantiles_05[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_05[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_05[["coefficients"]]["year", "Pr(>|t|)"] < 0.05)
+
+
+ q.95_m <- data.frame(species=species_list_mesic[i_m], tau=  quantiles_95[["tau"]],
+year_effect=  quantiles_95[["coefficients"]]["year", "Value"],
+year_SE=quantiles_95[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_95[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_95[["coefficients"]]["year", "Pr(>|t|)"] < 0.05)
+
+  quant_lat_m <- rbind(q0.5_m, q.95_m)
+```
+
+Running latitude quantile regression for ALL mesic species to find their respective p-values to determine sig contraction and expansion responses.
+```{r}
+quant_lat_m = c()
+
+for (i_m in 1:76) { #loop for species 1 to 76
+
+species_list_mesic[i_m] 
+  
+df_temp_m <- Final_Mesic %>% filter(Species == species_list_mesic[i_m]) 
+fit_m <- lm(decimalLatitude ~year, data= df_temp_m)
+
+quantiles_05 <- rq(fit_m, tau = c(0.05)) %>% summary(se="boot")
+
+quantiles_95 <- rq(fit_m, tau = c(0.95)) %>% summary(se="boot")
+
+ q0.5_m <-  data.frame(species=species_list_mesic[i_m],tau=  quantiles_05[["tau"]],
+year_effect=  quantiles_05[["coefficients"]]["year", "Value"],
+year_SE=quantiles_05[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_05[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_05[["coefficients"]]["year", "Pr(>|t|)"] < 0.05)
+
+ q.95_m <- data.frame(species=species_list_mesic[i_m],tau=  quantiles_95[["tau"]],
+year_effect=  quantiles_95[["coefficients"]]["year", "Value"],
+year_SE=quantiles_95[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_95[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_95[["coefficients"]]["year", "Pr(>|t|)"] < 0.05)
+
+quant_prel_m <- bind_rows(q0.5_m, q.95_m)
+quant_lat_m <- bind_rows(quant_lat_m, quant_prel_m)
+}
+
+quant_lat_m
+
+print(quant_lat_m)
+
+write_xlsx(quant_lat_m, "/Users/Euan/Desktop/Honours/Historic data/quantiles_lat_mesic.csv")
+```
+Longitude quantile regression for Acacia baeuerlenii
+```{r}
+species_list_mesic <- unique(Final_Mesic$Species)
+
+i_m = 1 
+
+species_list_arid[i_a] 
+
+df_temp_m <- Final_Mesic %>% filter(Species == species_list_mesic[i_m])
+
+fit_m_l <- lm(decimalLongitude ~year, data= df_temp_m)
+
+quantiles_05 <- rq(fit_m_l, tau = c(0.05)) %>% summary(se="boot")
+
+quantiles_95 <- rq(fit_m_l, tau = c(0.95)) %>% summary(se="boot")
+
+
+ q0.5_m <-  data.frame(species=species_list_mesic[i_m], tau=  quantiles_05[["tau"]],
+year_effect=  quantiles_05[["coefficients"]]["year", "Value"],
+year_SE=quantiles_05[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_05[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_05[["coefficients"]]["year", "Pr(>|t|)"] < 0.05) 
+
+
+ q.95_m <- data.frame(species=species_list_mesic[i_m], tau=  quantiles_95[["tau"]],
+year_effect=  quantiles_95[["coefficients"]]["year", "Value"],
+year_SE=quantiles_95[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_95[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_95[["coefficients"]]["year", "Pr(>|t|)"] < 0.05) 
+
+  quant_lon_m <- rbind(q0.5, q.95)
+```
+
+Longitude quantile regression for ALL mesic species
+```{r}
+quant_lon_m = c()
+
+for (i_m in 1:76) { 
+
+species_list_mesic[i_m]
+  
+df_temp_m <- Final_Mesic %>% filter(Species == species_list_mesic[i_m])
+
+fit_m_l <- lm(decimalLongitude ~year, data= df_temp_m)
+
+quantiles_05 <- rq(fit_m_l, tau = c(0.05)) %>% summary(se="boot")
+
+quantiles_95 <- rq(fit_m_l, tau = c(0.95)) %>% summary(se="boot")
+
+ q0.5_m <-  data.frame(species=species_list_mesic[i_m],tau=  quantiles_05[["tau"]],
+year_effect=  quantiles_05[["coefficients"]]["year", "Value"],
+year_SE=quantiles_05[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_05[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_05[["coefficients"]]["year", "Pr(>|t|)"] < 0.05)
+
+ q.95_m <- data.frame(species=species_list_mesic[i_m],tau=  quantiles_95[["tau"]],
+year_effect=  quantiles_95[["coefficients"]]["year", "Value"],
+year_SE=quantiles_95[["coefficients"]]["year", "Std. Error"],
+year_pvalue= quantiles_95[["coefficients"]]["year", "Pr(>|t|)"],
+sig =  quantiles_95[["coefficients"]]["year", "Pr(>|t|)"] < 0.05)
+
+quant_prel_m <- bind_rows(q0.5_m, q.95_m)
+quant_lon_m <- bind_rows(quant_lon_m, quant_prel_m)
+}
+
+quant_lon_m
+
+print(quant_lon_m)
+
+write.csv(quant_lon_m, "/Users/Euan/Desktop/Honours/Historic data/quantiles_lon_mesic.csv")
+```
+
+P-value adjustments for the study species
+```{r}
+#Arid
+LatQuantArid <-read.csv("quantiles_lat_arid.csv")
+LatQuantArid$adjust_pvalue <- p.adjust(LatQuantArid$year_pvalue, method = "holm")
+write.csv(LatQuantArid, "/Users/Euan/Desktop/Honours/Historic data/quantiles_lat_arid_pcorrected.csv")
+
+LonQuantArid <-read.csv("quantiles_lon_arid.csv")
+LonQuantArid$adjust_pvalue <- p.adjust(LonQuantArid$year_pvalue, method = "holm")
+write.csv(LonQuantArid, "/Users/Euan/Desktop/Honours/Historic data/quantiles_lon_arid_pcorrected.csv")
+
+#Mesic
+LatQuantMesic <-read.csv("quantiles_lat_mesic.csv")
+LatQuantMesic$adjust_pvalue <- p.adjust(LatQuantMesic$year_pvalue, method = "holm")
+write.csv(LatQuantMesic, "/Users/Euan/Desktop/Honours/Historic data/quantiles_lat_mesic_pcorrected.csv")
+
+LonQuantMesic <-read.csv("quantiles_lon_mesic.csv")
+LonQuantMesic$adjust_pvalue <- p.adjust(LonQuantMesic$year_pvalue, method = "holm")
+write.csv(LonQuantMesic, "/Users/Euan/Desktop/Honours/Historic data/quantiles_lon_mesic_pcorrected.csv")
+```
+Analysis of variance - significant differences between range edges for study species
+```{r}
+#Arid
+Lat_edge_sig_m <- lm(tau ~ year_effect, data = quant_lat_m)
+mesic_lat_ANOVA <- anova(Lat_edge_sig_m)
+
+Lon_edge_sig_m <- lm(tau ~ year_effect, data = quant_lon_m)
+mesic_lon_ANOVA <- anova(Lon_edge_sig_m)
+mesic_lon_ANOVA
+
+#Mesic
+Lat_edge_sig_a <- lm(tau ~ year_effect, data = quant_lat)
+arid_lat_ANOVA <- anova(Lat_edge_sig_a)
+
+Lon_edge_sig_a <- lm(tau ~ year_effect, data = quant_lon)
+arid_lon_ANOVA <- anova(Lon_edge_sig_a)
+arid_lon_ANOVA
+```

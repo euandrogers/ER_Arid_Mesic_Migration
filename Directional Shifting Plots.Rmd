@@ -1,0 +1,568 @@
+Load packages
+```{r}
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+```
+Import datasets
+```{r}
+Arid_Species <- read.csv("Final_Arid.csv")
+Mesic_Species <- read.csv("Final_Mesic.csv")
+```
+Load Latitude data for Arid species
+```{r}
+species_list <- unique(Arid_Species$Species) #Create a list of arid species
+
+i = 1 #Run the first species in the list manually to troubleshoot
+
+species_list[i] 
+
+df_temp <- Arid_Species %>% filter(Species == species_list[i]) #DataFrame filtered by the study species
+  lm_temp <- lm(decimalLatitude ~ year, data = df_temp) #Run the linear model
+  summary_temp <- summary(lm_temp) #Save the summary stats
+  p_temp <- pf(summary_temp$fstatistic[1], #Calculating the p-value from the three f statistics
+               summary_temp$fstatistic[2],
+               summary_temp$fstatistic[3],lower.tail=F)
+
+  summary_temp
+
+  stats_temp <- data.frame( #make a table of summary statistics:
+    species = species_list[i], #assign species 1 to species list
+    formula = "lm(decimalLatitude ~ year)",
+    n = nrow(df_temp), #number of records
+    year_effect = lm_temp[["coefficients"]][["year"]], #effect of year slope
+      year_se = summary_temp[["coefficients"]][["year","Std. Error"]], #standard error of the slope
+    r_sq = summary_temp[["r.squared"]], #r squared
+    r_squ_adj = summary_temp[["adj.r.squared"]], #adjusted r squared
+    p_val = p_temp, #obtain the p-value
+    sig = p_temp < 0.05 #determine whether the p-value significant
+    )
+  
+  summary_stats_1 <- stats_temp 
+  
+  summary_stats_2 <- stats_temp
+
+   rm(i, df_temp, lm_temp, summary_temp, p_temp, stats_temp) #removed temporary data now that everything is on the summary table
+
+```
+Creating latitude graph for Arid species 1-40
+```{r}
+summary_stats_1<-c()
+
+for (i in 1:40) { #loop for species 1 to 40 (Acaica abrupta - Eremophila metallicorum)
+
+df_temp <- Arid_Species %>% filter(Species == species_list[i]) 
+  lm_temp <- lm(decimalLatitude ~ year, data = df_temp) 
+  summary_temp <- summary(lm_temp)
+    p_temp <- pf(summary_temp$fstatistic[1], 
+               summary_temp$fstatistic[2],
+               summary_temp$fstatistic[3],lower.tail=F)
+  stats_temp <- data.frame( 
+    species = species_list[i], 
+    formula = "lm(decimalLatitude ~ year)", 
+    n = nrow(df_temp), 
+    year_effect = lm_temp[["coefficients"]][["year"]], 
+    year_se = summary_temp[["coefficients"]][["year","Std. Error"]], 
+    r_sq = summary_temp[["r.squared"]], 
+    r_squ_adj = summary_temp[["adj.r.squared"]], 
+    p_val = p_temp,
+    sig = p_temp < 0.05 
+    )
+
+  summary_stats_1 <- bind_rows(summary_stats_1, stats_temp) #attach the new data onto the summary table
+  
+   rm(df_temp, lm_temp, summary_temp, p_temp, stats_temp)
+}
+
+summary_stats_1 #have a look at the summary table to ensure columns and rows are correct
+
+cbPalette <- c("#999999", "#000000") #create blue (mesic) and orange (arid) colour scheme
+
+#Create plot of latitude shifts of arid species 1-40
+LatArid1to40 <- ggplot(data = summary_stats_1, aes(year_effect, species,color=sig))+
+  geom_point()+ scale_colour_manual(values = cbPalette) +
+  xlab("Mean Rate of Latitude Shift (degrees/year)")+
+  ylab("Arid Species") +
+  geom_errorbar(aes(xmin=year_effect-year_se, xmax=year_effect+year_se))+
+  theme_classic()+
+  scale_x_continuous(breaks = seq(-0.08,0.12, 0.04), limits = c(-0.08,0.12))+
+  theme(axis.text.x = element_text(angle = 45, hjust=1),
+        axis.text.y = element_text(face="italic")) +
+  theme(text = element_text(size = 13)) + 
+  geom_line() +
+  geom_vline(xintercept = 0, colour = "red", linetype= "dashed") 
+
+LatArid1to40 #view plot
+
+ggsave("LatArid1to40.pdf", plot = LatArid1to40, height = 6, width = 6, dpi = 300)
+
+```
+Creating latitude graph for Arid species 41-80
+```{r}
+summary_stats_2<-c()
+
+for (i in 41:80) { #loop for species 41 to 80 (Eremophila neglecta - Xerochrysum interiore)
+
+df_temp <- Arid_Species %>% filter(Species == species_list[i]) 
+  lm_temp <- lm(decimalLatitude ~ year, data = df_temp) 
+  summary_temp <- summary(lm_temp) 
+    p_temp <- pf(summary_temp$fstatistic[1], 
+               summary_temp$fstatistic[2],
+               summary_temp$fstatistic[3],lower.tail=F)
+
+  stats_temp <- data.frame( 
+    species = species_list[i], 
+    formula = "lm(decimalLatitude ~ year)", 
+    n = nrow(df_temp), #number of records
+    year_effect = lm_temp[["coefficients"]][["year"]], 
+    year_se = summary_temp[["coefficients"]][["year","Std. Error"]], 
+    r_sq = summary_temp[["r.squared"]],
+    r_squ_adj = summary_temp[["adj.r.squared"]], 
+    p_val = p_temp,
+    sig = p_temp < 0.05 
+    )
+  
+  summary_stats_2 <- bind_rows(summary_stats_2, stats_temp)
+
+   rm(df_temp, lm_temp, summary_temp, p_temp, stats_temp) 
+}
+
+summary_stats_2 
+
+#Create plot of longitude shifts of arid species 1-40
+LatArid41to80 <- ggplot(data = summary_stats_2, aes(year_effect, species,color=sig))+
+  geom_point()+ scale_colour_manual(values = cbPalette) +
+  xlab("Mean Rate of Latitude Shift (degrees/year)")+
+  ylab("Arid Species") +
+  geom_errorbar(aes(xmin=year_effect-year_se, xmax=year_effect+year_se))+
+  theme_classic()+
+  scale_x_continuous(breaks = seq(-0.08,0.12, 0.04), limits = c(-0.08,0.12))+
+  theme(axis.text.x = element_text(angle = 45, hjust=1),
+        axis.text.y = element_text(face="italic")) +
+  theme(text = element_text(size = 13)) + 
+  geom_line() +
+  geom_vline(xintercept = 0, colour = "red", linetype= "dashed") 
+
+LatArid41to80
+
+ggsave("LatArid41to80.pdf", plot = LatArid41to80, height = 6, width = 6, dpi = 300)
+```
+Load longitude data for arid species
+```{r}
+species_list <- unique(Arid_Species$Species) 
+
+i = 1 
+
+species_list[i] 
+
+df_temp <- Arid_Species %>% filter(Species == species_list[i]) 
+  lm_temp <- lm(decimalLongitude ~ year, data = df_temp) 
+  summary_temp <- summary(lm_temp) 
+  p_temp <- pf(summary_temp$fstatistic[1], 
+               summary_temp$fstatistic[2],
+               summary_temp$fstatistic[3],lower.tail=F)
+
+  summary_temp
+
+  stats_temp <- data.frame( 
+    species = species_list[i], 
+    formula = "lm(decimalLongitude ~ year)",
+    n = nrow(df_temp),
+    year_effect = lm_temp[["coefficients"]][["year"]],
+      year_se = summary_temp[["coefficients"]][["year","Std. Error"]],
+    r_sq = summary_temp[["r.squared"]],
+    r_squ_adj = summary_temp[["adj.r.squared"]],
+    p_val = p_temp,
+    sig = p_temp < 0.05 
+    )
+
+   rm(i, df_temp, lm_temp, summary_temp, p_temp, stats_temp)
+```
+Creating graph for longitude for the Arid species 1-40
+```{r}
+summary_stats_3<-c()
+
+for (i in 1:40) {
+
+df_temp <- Arid_Species %>% filter(Species == species_list[i]) 
+  lm_temp <- lm(decimalLongitude ~ year, data = df_temp) 
+  summary_temp <- summary(lm_temp) 
+    p_temp <- pf(summary_temp$fstatistic[1], 
+               summary_temp$fstatistic[2],
+               summary_temp$fstatistic[3],lower.tail=F)
+    
+  stats_temp <- data.frame( 
+    species = species_list[i], 
+    formula = "lm(decimalLongitude ~ year)", 
+    n = nrow(df_temp), 
+    year_effect = lm_temp[["coefficients"]][["year"]], 
+    year_se = summary_temp[["coefficients"]][["year","Std. Error"]],
+    r_sq = summary_temp[["r.squared"]], 
+    r_squ_adj = summary_temp[["adj.r.squared"]],
+    p_val = p_temp,
+    sig = p_temp < 0.05 
+    )
+
+  summary_stats_3 <- bind_rows(summary_stats_3, stats_temp) 
+
+   rm(df_temp, lm_temp, summary_temp, p_temp, stats_temp)
+}
+
+summary_stats_3 
+
+cbPalette <- c("#999999", "#000000")
+
+#Create plot of longitude shifts of arid species 1-40
+LonSpecies1to40 <- ggplot(data = summary_stats_3, aes(year_effect, species,color=sig))+
+  geom_point()+ scale_colour_manual(values = cbPalette) +
+  xlab("Mean Rate of Longitude Shift (degrees/year)")+
+  ylab("Arid Species") +
+  geom_errorbar(aes(xmin=year_effect-year_se, xmax=year_effect+year_se))+
+  theme_classic()+
+  xlim(-0.13, 0.16)+
+  theme(axis.text.x = element_text(angle = 45, hjust=1)) +
+  theme(text = element_text(size = 13)) +
+  geom_line() +
+  geom_vline(xintercept = 0, colour = "red", linetype= "dashed")+
+  scale_x_continuous(breaks = seq(-0.16,0.16, 0.08), limits = c(-0.16,0.16))+
+  theme(axis.text.x = element_text(angle = 45, hjust=1),
+        axis.text.y = element_text(face="italic")) +
+  theme(text = element_text(size = 13)) + 
+  geom_line() +
+  geom_vline(xintercept = 0, colour = "red", linetype= "dashed")
+
+LonSpecies1to40
+
+ggsave("LonArid1to40.pdf", plot = LonSpecies1to40, height = 6, width = 6, dpi = 300)
+```
+
+```{r}
+summary_stats_4<-c()
+
+for (i in 41:80) {
+
+df_temp <- Arid_Species %>% filter(Species == species_list[i]) 
+  lm_temp <- lm(decimalLongitude ~ year, data = df_temp) 
+  summary_temp <- summary(lm_temp) 
+    p_temp <- pf(summary_temp$fstatistic[1], 
+               summary_temp$fstatistic[2],
+               summary_temp$fstatistic[3],lower.tail=F)
+
+ 
+
+  stats_temp <- data.frame( 
+    species = species_list[i], 
+    formula = "lm(decimalLongitude ~ year)", 
+    n = nrow(df_temp), 
+    year_effect = lm_temp[["coefficients"]][["year"]], 
+    year_se = summary_temp[["coefficients"]][["year","Std. Error"]], 
+    r_sq = summary_temp[["r.squared"]], 
+    r_squ_adj = summary_temp[["adj.r.squared"]], 
+    p_val = p_temp,
+    sig = p_temp < 0.05 
+    )
+
+  summary_stats_4 <- bind_rows(summary_stats_4, stats_temp) 
+
+   rm(df_temp, lm_temp, summary_temp, p_temp, stats_temp)
+}
+
+summary_stats_4 
+
+#Create plot of longitude shifts of arid species 41-80
+LonSpecies41to80 <- ggplot(data = summary_stats_4, aes(year_effect, species,color=sig))+
+  geom_point()+ scale_colour_manual(values = cbPalette) +
+  xlab("Mean Rate of Longitude Shift (degrees/year)")+
+  ylab("Arid Species") +
+  geom_errorbar(aes(xmin=year_effect-year_se, xmax=year_effect+year_se))+
+  theme_classic()+
+  scale_x_continuous(breaks = seq(-0.16,0.16, 0.08), limits = c(-0.16,0.16))+
+  theme(axis.text.x = element_text(angle = 45, hjust=1),
+        axis.text.y = element_text(face="italic")) +
+  theme(text = element_text(size = 13)) + 
+  geom_line() +
+  geom_vline(xintercept = 0, colour = "red", linetype= "dashed")
+
+LonSpecies41to80
+
+ggsave("LonArid41to80.pdf", plot = LonSpecies41to80, height = 6, width = 6, dpi = 300)
+```
+Running latitude linear regression for Acacia baeuerlenii (Mesic)
+```{r}
+species_list_mesic <- unique(Mesic_Species$Species) #make list of species
+
+i_m = 1 
+
+species_list_mesic[i_m] 
+
+df_temp_m <- Mesic_Species %>% filter(Species == species_list_mesic[i_m]) 
+  lm_temp_m <- lm(decimalLatitude ~ year, data = df_temp_m) 
+  summary_temp_m <- summary(lm_temp_m) 
+  p_temp_m <- pf(summary_temp_m$fstatistic[1],
+               summary_temp_m$fstatistic[2],
+               summary_temp_m$fstatistic[3],lower.tail=F)
+
+  stats_temp_m <- data.frame(
+    species = species_list_mesic[i_m],
+    formula = "lm(decimalLatitude ~ year)",
+    n = nrow(df_temp_m),
+    year_effect = lm_temp_m[["coefficients"]][["year"]],
+    year_se = summary_temp_m[["coefficients"]][["year","Std. Error"]],
+    r_sq = summary_temp_m[["r.squared"]],
+    r_squ_adj = summary_temp_m[["adj.r.squared"]],
+    p_val = p_temp_m,
+    sig = p_temp_m < 0.05 
+    ) 
+  
+  summary_stats_mesic <- stats_temp_m
+  
+  rm(i_m, df_temp_m, lm_temp_m, summary_temp_m, p_temp_m, stats_temp_m)
+```
+Creating graphs for mesic latitude
+```{r}
+summary_stats_5<-c()
+
+for (i_m in 1:38) { #loop for species 1 to 38 (Acacia baeuerlenii - Eucalyptus infera)
+
+df_temp_m <- Mesic_Species %>% filter(Species == species_list_mesic[i_m]) #filter DataFrame by your study species
+  lm_temp_m <- lm(decimalLatitude ~ year, data = df_temp_m) #run the linear model
+  summary_temp_m <- summary(lm_temp_m) #save the summary stats as well
+  p_temp_m <- pf(summary_temp_m$fstatistic[1],
+               summary_temp_m$fstatistic[2],
+               summary_temp_m$fstatistic[3],lower.tail=F)
+
+  stats_temp_m <- data.frame( #make a table of summary statistics:
+    species = species_list_mesic[i_m], #what species is this?
+    formula = "lm(decimalLatitude ~ year)", #what formula did we use?
+    n = nrow(df_temp_m), #number of records
+    year_effect = lm_temp_m[["coefficients"]][["year"]], #effect of year
+    year_se = summary_temp_m[["coefficients"]][["year","Std. Error"]], #standard error of the slope
+    r_sq = summary_temp_m[["r.squared"]], #r squared
+    r_squ_adj = summary_temp_m[["adj.r.squared"]], #adjusted r squared
+    p_val = p_temp_m,
+    sig = p_temp_m < 0.05 #is the p val significant
+    ) 
+
+  summary_stats_5 <- bind_rows(summary_stats_5, stats_temp_m) #attach the new data onto the summary table
+
+   rm(df_temp, lm_temp_m, summary_temp_m, p_temp_m, stats_temp_m) #remove temporary data now that everything is on the big table
+
+}
+
+summary_stats_5 #have a look at summary table
+
+LatMesic1to38 <- ggplot(data = summary_stats_5, aes(year_effect, species,color=sig))+
+  geom_point()+ scale_colour_manual(values = cbPalette) +
+  xlab("Mean Rate of Latitude Shift (degrees/year)")+
+  ylab("Mesic Species") +
+  geom_errorbar(aes(xmin=year_effect-year_se, xmax=year_effect+year_se))+
+  theme_classic()+
+  #scale_x_continuous(breaks = seq(-0.06,0.06, 0.03), limits = c(-0.06,0.06))+
+  scale_x_continuous(breaks = seq(-0.08,0.12, 0.04), limits = c(-0.08,0.12))+
+  theme(axis.text.x = element_text(angle = 45, hjust=1),
+        axis.text.y = element_text(face="italic")) +
+  theme(text = element_text(size = 13)) + 
+  geom_line() +
+  geom_vline(xintercept = 0, colour = "red", linetype= "dashed")
+
+
+LatMesic1to38
+
+ggsave("LatMesic1to38.pdf", plot = LatMesic1to38, height = 6, width = 6, dpi = 300)
+```
+#Creating graphs for mesic latitude
+```{r}
+summary_stats_6<-c()
+
+for (i_m in 39:76) { #loop for species 39 to 76 (Eucalyptus magnificata - Uromyrtus australis)
+
+df_temp_m <- Mesic_Species %>% filter(Species == species_list_mesic[i_m]) #filter DataFrame by your study species
+  lm_temp_m <- lm(decimalLatitude ~ year, data = df_temp_m) #run the linear model
+  summary_temp_m <- summary(lm_temp_m) #save the summary stats as well
+  p_temp_m <- pf(summary_temp_m$fstatistic[1],
+               summary_temp_m$fstatistic[2],
+               summary_temp_m$fstatistic[3],lower.tail=F)
+
+  stats_temp_m <- data.frame( #make a table of summary statistics:
+    species = species_list_mesic[i_m], #what species is this?
+    formula = "lm(decimalLatitude ~ year)", #what formula did we use?
+    n = nrow(df_temp_m), #number of records
+    year_effect = lm_temp_m[["coefficients"]][["year"]], #effect of year
+    year_se = summary_temp_m[["coefficients"]][["year","Std. Error"]], #standard error of the slope
+    r_sq = summary_temp_m[["r.squared"]], #r squared
+    r_squ_adj = summary_temp_m[["adj.r.squared"]], #adjusted r squared
+    p_val = p_temp_m,
+    sig = p_temp_m < 0.05 #is the p val significant
+    ) 
+
+  summary_stats_6 <- bind_rows(summary_stats_6, stats_temp_m) #attach the new data onto the summary table
+
+   rm(df_temp, lm_temp_m, summary_temp_m, p_temp_m, stats_temp_m) #remove temporary data now that everything is on the big table
+
+}
+
+summary_stats_6 #have a look at summary table
+
+cbPalette <- c("#999999", "#000000")
+
+LatMesic39to76 <- ggplot(data = summary_stats_6, aes(year_effect, species, color=sig))+
+  geom_point()+ scale_colour_manual(values = cbPalette) +
+  xlab("Mean Rate of Latitude Shift (degrees/year)")+
+  ylab("Mesic Species") +
+  geom_errorbar(aes(xmin=year_effect-year_se, xmax=year_effect+year_se))+
+  theme_classic()+
+  #scale_x_continuous(breaks = seq(-0.06,0.06, 0.03), limits = c(-0.06,0.06))+
+  scale_x_continuous(breaks = seq(-0.08,0.12, 0.04), limits = c(-0.08,0.12))+
+  theme(axis.text.x = element_text(angle = 45, hjust=1),
+        axis.text.y = element_text(face="italic")) +
+  theme(text = element_text(size = 13)) + 
+  geom_line() +
+  geom_vline(xintercept = 0, colour = "red", linetype= "dashed")
+
+LatMesic39to76
+
+ggsave("LatMesic39to76.pdf", plot = LatMesic39to76, height = 6, width = 6, dpi = 300)
+
+```
+#Running longitude linear regression for Acacia baeuerlenii (Mesic)
+```{r}
+species_list_mesic <- unique(Mesic_Species$Species) #make list of species
+
+i_m = 1 #do the first species manually to troubleshoot
+
+species_list_mesic[i_m] # check what this species is for funsies
+
+df_temp_m <- Mesic_Species %>% filter(Species == species_list_mesic[i_m]) #filter DataFrame by your study species
+  lm_temp_m <- lm(decimalLongitude ~ year, data = df_temp_m) #run the linear model
+  summary_temp_m <- summary(lm_temp_m) #save the summary stats as well
+  p_temp_m <- pf(summary_temp_m$fstatistic[1],
+               summary_temp_m$fstatistic[2],
+               summary_temp_m$fstatistic[3],lower.tail=F)
+
+  stats_temp_m <- data.frame( #make a table of summary statistics:
+    species = species_list_mesic[i_m], #what species is this?
+    formula = "lm(decimalLongitude ~ year)", #what formula did we use?
+    n = nrow(df_temp_m), #number of records
+    year_effect = lm_temp_m[["coefficients"]][["year"]], #effect of year
+    year_se = summary_temp_m[["coefficients"]][["year","Std. Error"]], #standard error of the slope
+    r_sq = summary_temp_m[["r.squared"]], #r squared
+    r_squ_adj = summary_temp_m[["adj.r.squared"]], #adjusted r squared
+    p_val = p_temp_m,
+    sig = p_temp_m < 0.05 #is the p val significant
+    ) 
+  
+  summary_stats_mesic <- stats_temp_m #save this as the first row of your list of summary statistics
+  
+   rm(i_m, df_temp_m, lm_temp_m, summary_temp_m, p_temp_m, stats_temp_m) #remove temporary data now that everything is on the big table
+```
+#Creating graphs for mesic longitude
+```{r}
+summary_stats_7<-c()
+
+for (i_m in 1:38) { #loop for species 1 to 38 (Acacia baeuerlenii - Eucalyptus infera)
+
+df_temp_m <- Mesic_Species %>% filter(Species == species_list_mesic[i_m]) #filter DataFrame by your study species
+  lm_temp_m <- lm(decimalLongitude ~ year, data = df_temp_m) #run the linear model
+  summary_temp_m <- summary(lm_temp_m) #save the summary stats as well
+  p_temp_m <- pf(summary_temp_m$fstatistic[1],
+               summary_temp_m$fstatistic[2],
+               summary_temp_m$fstatistic[3],lower.tail=F)
+
+  stats_temp_m <- data.frame( #make a table of summary statistics:
+    species = species_list_mesic[i_m], #what species is this?
+    formula = "lm(decimalLongitude ~ year)", #what formula did we use?
+    n = nrow(df_temp_m), #number of records
+    year_effect = lm_temp_m[["coefficients"]][["year"]], #effect of year
+    year_se = summary_temp_m[["coefficients"]][["year","Std. Error"]], #standard error of the slope
+    r_sq = summary_temp_m[["r.squared"]], #r squared
+    r_squ_adj = summary_temp_m[["adj.r.squared"]], #adjusted r squared
+    p_val = p_temp_m,
+    sig = p_temp_m < 0.05 #is the p val significant
+    ) 
+
+  summary_stats_7 <- bind_rows(summary_stats_7, stats_temp_m) #attach the new data onto the summary table
+
+   rm(df_temp, lm_temp_m, summary_temp_m, p_temp_m, stats_temp_m) #remove temporary data now that everything is on the big table
+
+}
+
+summary_stats_7 #have a look at summary table
+
+LonMesic1to38 <- ggplot(data = summary_stats_7, aes(year_effect, species,color=sig))+
+  geom_point()+ scale_colour_manual(values = cbPalette) +
+  xlab("Mean Rate of Longitude Shift (degrees/year)")+
+  ylab("Mesic Species") +
+  geom_errorbar(aes(xmin=year_effect-year_se, xmax=year_effect+year_se))+
+  theme_classic()+
+  scale_x_continuous(breaks = seq(-0.03,0.03, 0.01), limits = c(-0.03,0.03))+
+  theme(axis.text.x = element_text(angle = 45, hjust=1),
+        axis.text.y = element_text(face="italic")) +
+  theme(text = element_text(size = 13)) + 
+  geom_line() +
+  geom_vline(xintercept = 0, colour = "red", linetype= "dashed")
+
+LonMesic1to38
+
+ggsave("LonMesic1to38.pdf", plot = LonMesic1to38, height = 6, width = 6, dpi = 300)
+
+LonMesic1to38
+```
+#Creating graphs for mesic longitude
+```{r}
+summary_stats_8<-c()
+
+for (i_m in 39:76) { #loop for species 39 to 76 (Eucalyptus magnificata - Uromyrtus australis)
+
+df_temp_m <- Mesic_Species %>% filter(Species == species_list_mesic[i_m]) #filter DataFrame by your study species
+  lm_temp_m <- lm(decimalLongitude ~ year, data = df_temp_m) #run the linear model
+  summary_temp_m <- summary(lm_temp_m) #save the summary stats as well
+  p_temp_m <- pf(summary_temp_m$fstatistic[1],
+               summary_temp_m$fstatistic[2],
+               summary_temp_m$fstatistic[3],lower.tail=F)
+
+  stats_temp_m <- data.frame( #make a table of summary statistics:
+    species = species_list_mesic[i_m], #what species is this?
+    formula = "lm(decimalLongitude ~ year)", #what formula did we use?
+    n = nrow(df_temp_m), #number of records
+    year_effect = lm_temp_m[["coefficients"]][["year"]], #effect of year
+    year_se = summary_temp_m[["coefficients"]][["year","Std. Error"]], #standard error of the slope
+    r_sq = summary_temp_m[["r.squared"]], #r squared
+    r_squ_adj = summary_temp_m[["adj.r.squared"]], #adjusted r squared
+    p_val = p_temp_m,
+    sig = p_temp_m < 0.05 #is the p val significant
+    ) 
+
+  summary_stats_8 <- bind_rows(summary_stats_8, stats_temp_m) #attach the new data onto the summary table
+
+   rm(df_temp, lm_temp_m, summary_temp_m, p_temp_m, stats_temp_m) #remove temporary data now that everything is on the big table
+
+}
+
+summary_stats_8 #have a look at summary table
+
+cbPalette <- c("#999999", "#000000")
+
+LonMesic39to76 <- ggplot(data = summary_stats_8, aes(year_effect, species,color=sig))+
+  geom_point()+ scale_colour_manual(values = cbPalette) +
+  xlab("Mean Rate of Longitude Shift (degrees/year)")+
+  ylab("Mesic Species") +
+  geom_errorbar(aes(xmin=year_effect-year_se, xmax=year_effect+year_se))+
+  theme_classic()+
+  scale_x_continuous(breaks = seq(-0.03,0.03, 0.01), limits = c(-0.03,0.03))+
+  theme(axis.text.x = element_text(angle = 45, hjust=1),
+        axis.text.y = element_text(face="italic")) +
+  theme(text = element_text(size = 13)) + 
+  geom_line() +
+  geom_vline(xintercept = 0, colour = "red", linetype= "dashed")
+
+LonMesic39to76
+
+ggsave("LonMesic39to76.pdf", plot = LonMesic39to76, height = 6, width = 6, dpi = 300)
+```
+Combine Lat Plots
+```{r}
+LatPlots <- grid.arrange(grobs = (LatArid1to40, LatArid41to80, LatMesic1to38, LatMesic39to76, ncol = 2) 
+                         
+LonPlots <- grid.arrange(grobs = (LonArid1to40, LonArid41to80, LonMesic1to38, LonMesic39to76, ncol = 2) 
+```
+
