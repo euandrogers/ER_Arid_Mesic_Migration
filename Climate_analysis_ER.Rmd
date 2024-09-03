@@ -1,0 +1,110 @@
+#When did climate change begin? A climate analysis:
+uploading all required packages:
+```{r}
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+library(broom)
+library(ggforce)
+library(tidyr)
+library(ggtext)
+install.packages("skimr")
+library(skimr)
+library(purrr)
+install.packages("patchwork")
+library(patchwork)
+library(mgcv) #For GAM function
+install.packages("egg")
+library(egg)
+install.packages("gratia")
+library(gratia) #testing GAMs
+install.packages("strucchange")
+library(strucchange)#For breakpoints analysis
+install.packages("utils")
+library(utils)
+install.packages("WRS2")
+library(WRS2)
+install.packages("scales")
+install.packages("segmented")
+library(segmented)
+library(scales)
+```
+Uploade arid and mesic data:
+```{r}
+setwd("~/Desktop/Honours/Historic data")
+
+arid_temp_data <- read.csv("Alice_Springs_Max_Temp_Data.csv", stringsAsFactors=FALSE, fileEncoding="latin1")
+
+mesic_temp_data <-read.csv("Amberley_Max_Temp_Data.csv", stringsAsFactors=FALSE, fileEncoding="latin1")
+```
+Calculate average annual temperature for the arid polygon
+```{r}
+arid_year_temp <- arid_temp_data %>% # Some data wrangling to get study duration
+  group_by(Year) %>%
+  summarize(
+    MaxTemp = max(max_temp, na.rm=T),
+    averageTemp = mean(max_temp, na.rm=T)
+      )
+arid_year_temp <- subset(arid_year_temp, Year>1940) # Because the records weren't full for 1941 the temperature appears hotter than the annual average and thus I'm removing it
+```
+Calculate average annual temperature for the mesic polygon
+```{r}
+mesic_year_temp <- mesic_temp_data %>% # Some data wrangling to get study duration
+  group_by(Year) %>%
+  summarize(
+    MaxTemp = max(max_temp, na.rm=T),
+    averageTemp = mean(max_temp, na.rm=T)
+      )
+mesic_year_temp <- subset(mesic_year_temp, Year>1940) # Because the records weren't full for 1941 the temperature appears hotter than the annual average and thus I'm removing it
+```
+Arid segmented/breakpoints regression:
+```{r}
+arid_seg_lm <- lm(averageTemp ~ Year, data = arid_year_temp)
+arid_seg_temp <-segmented(arid_seg_lm)
+summary(arid_seg_temp)
+
+#suggesting that the initial heating has been recorded around 2019 (+ or - 1 year)
+```
+Mesic segmented/breakpoints regression:
+```{r}
+mesic_seg_lm <- lm(averageTemp ~ Year, data = mesic_year_temp)
+mesic_seg_temp <-segmented(mesic_seg_lm)
+summary(mesic_seg_temp)
+
+#suggesting that the initial heating has been recorded around 1976 (+ or - 7 year)
+```
+Arid plot
+```{r}
+plot(arid_year_temp$Year, arid_year_temp$averageTemp, pch=16, col ='steelblue', ylab = "Average annual temperature", xlab = "Year", cex.lab = 3, cex= 1.2, cex.lab = 1.2)
+plot(arid_seg_temp, add=T)
+```
+```{r}
+arid_bp_temp1 <-breakpoints(averageTemp ~ Year, data = arid_year_temp)
+summary(arid_bp_temp1) #suggesting a breakpoint around 1953
+```
+Mesic plot
+```{r}
+plot(mesic_year_temp$Year, mesic_year_temp$averageTemp, pch=16, col ='steelblue', ylab = "Average annual temperature", xlab = "Year", cex.lab = 3, cex= 1.2, cex.lab = 1.2)
+plot(mesic_seg_temp, add=T)
+```
+```{r}
+mesic_bp_temp1 <-breakpoints(averageTemp ~ Year, data = mesic_year_temp)
+summary(mesic_bp_temp1) #suggesting a breakpoint around 1953
+```
+A GAM analysis: Arid
+```{r}
+arid_temp_gam <- gam(averageTemp ~ s(Year, k=70), data = arid_year_temp, method = "REML")
+summary(arid_temp_gam)
+gam.check(arid_temp_gam, rep=500)
+appraise(arid_temp_gam)
+```
+Arid - analysis presents a similar trend of increase in warming around the mid 1970's
+```{r}
+arid_p_temp <- ggplot(arid_year_temp, aes(Year, averageTemp)) +
+  geom_point() +
+  geom_smooth(method = "gam", formula = y ~ s(x, k=70), aes(color = "gam", fill = "confidence interval"))+
+  scale_fill_manual(values = "lightblue", name = NULL) +
+  scale_color_manual(values = "darkblue", name = NULL) +
+  theme_article()
+arid_p_temp
+```
