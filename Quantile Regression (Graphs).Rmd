@@ -1,3 +1,5 @@
+setwd("~/Desktop/Honours/ER Code Thesis/Datasets")
+
 Install Packages
 ```{r}
 library(dplyr)
@@ -52,7 +54,7 @@ Running latitude quantile regression for ALL arid species to find their respecti
 ```{r}
 quant_lat = c()
 
-for (i_a in 1:80) { #loop for species 1 to 80
+for (i_a in 1:79) { #loop for species 1 to 79
 
 species_list_arid <- unique(Final_Arid$Species)
 
@@ -88,7 +90,7 @@ qrpv95<-  data.frame(species=species_list_arid[i_a], tau=  quantiles_05[["tau"]]
   quant_lat <- bind_rows(quant_lat, quant_prel)
 }
 ```
-Latitude quantile regression for individual arid species
+Latitude quantile regression for significant  arid species
 ```{r}
 Lat1 <- filter(Final_Arid, Species =="Acacia abrupta") %>%
   rq(decimalLatitude ~ year, tau=c(.05,0.95),.)
@@ -100,7 +102,8 @@ Lat1df<- data.frame(cbind(y=Lat1[["y"]],
 
 ggplot(data=df_temp_a, aes(x=year, y=decimalLatitude))+
     geom_point(size = 3.5)+
-     coord_cartesian(xlim = c(1915, 2022), ylim = c(-35, -20)) + 
+  geom_smooth(method = "lm", se = FALSE)+
+     coord_cartesian(xlim = c(1945, 2025), ylim = c(-35, -20)) + 
     geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2], 
                     linetype=qrpv95$slope_sig), col = "dark orange", size = 1)+
     geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2], 
@@ -149,7 +152,7 @@ for(species in spp) {
   spp_species_plots[[species]] = ggplot(data=df_temp_a,
                                         aes(year, decimalLatitude)) +
     geom_point(size = 3.5)+
-    coord_cartesian(xlim = c(1915, 2022), ylim = c(-35, -20)) +
+    coord_cartesian(xlim = c(1945, 2025), ylim = c(-35, -20)) +
     geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2],
                     linetype=qrpv95$slope_sig), col = "dark orange", size = 1)+
     geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2],
@@ -210,7 +213,7 @@ Create quantile longitude regression graph for all arid plants
 ```{r}
 quant_lon = c()
 
-for (i_a in 1:80) { #loop for species 1 to 80
+for (i_a in 1:79) { #loop for species 1 to 79
   
   species_list_arid[i_a] # check what this species is for funsies
   
@@ -251,8 +254,7 @@ Lon1df<- data.frame(cbind(y=Lon1[["y"]],
 
  ggplot(data=df_temp_a, aes(x=year, y=decimalLongitude))+
     geom_point(size = 3.5)+
-   geom_smooth(method = "lm", se = FALSE)+
-     coord_cartesian(xlim = c(1915, 2022), ylim = c(110, 150)) + 
+     coord_cartesian(xlim = c(1945, 2025), ylim = c(110, 150)) + 
     geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2], 
                     linetype=qrpv95$slope_sig), col = "dark orange", size = 1)+
     geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2], 
@@ -302,7 +304,7 @@ for(species in spp) {
   spp_species_plots[[species]] = ggplot(data=df_temp_a,
                                         aes(year, decimalLongitude)) +
     geom_point(size = 3.5)+
-    coord_cartesian(xlim = c(1915, 2022), ylim = c(110, 150)) +
+    coord_cartesian(xlim = c(1945, 2025), ylim = c(110, 150)) +
     geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2],
                     linetype=qrpv95$slope_sig), col = "dark orange", size = 1)+
     geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2],
@@ -363,7 +365,7 @@ Create quantile latitude regression graph for all mesic plants
 ```{r}
 quant_lat_m = c()
 
-for (i_m in 1:76) { #loop for species 1 to 76
+for (i_m in 1:75) { #loop for species 1 to 75
   
   species_list_mesic[i_m] # check what this species is for funsies
   
@@ -404,7 +406,7 @@ Lat1dfm<- data.frame(cbind(y=Lat1m[["y"]],
 
   ggplot(data=df_temp_m, aes(x=year, y=decimalLatitude))+
     geom_point(size = 3.5)+
-     coord_cartesian(xlim = c(1896, 2022), ylim = c(-35, -20)) + 
+     coord_cartesian(xlim = c(1945, 2025), ylim = c(-35, -20)) + 
     geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2], 
                     linetype=qrpv95m$slope_sig), col = "blue", size = 1)+
     geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2], 
@@ -454,7 +456,7 @@ for(species in spp) {
                                         aes(year, decimalLatitude)) +
     geom_point(size = 3.5)+
     geom_smooth(method = "lm", se = FALSE)+
-    coord_cartesian(xlim = c(1895, 2025), ylim = c(-35, -20)) +
+    coord_cartesian(xlim = c(1945, 2025), ylim = c(-35, -20)) +
     geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2],
                     linetype=qrpv95m$slope_sig), col = "blue", size = 1)+
     geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2],
@@ -472,9 +474,9 @@ for(species in spp) {
 
   print(spp_species_plots[[species]])
   
-  #ggsave(spp_species_plots[[species]],
-        # file=paste0("Lat_mesic_quantreg", species,".png"),
-        # width = 15, height = 10, units = "cm", dpi=300)
+  ggsave(spp_species_plots[[species]],
+         file=paste0("Lat_mesic_quantreg", species,".png"),
+        width = 15, height = 10, units = "cm", dpi=300)
 }
 ```
 Create quantile longitude regression graph for first mesic plant
@@ -515,7 +517,7 @@ Create quantile longitude regression graph for all mesic plants
 ```{r}
 quant_lon_m = c()
 
-for (i_m in 1:76) { #loop for species 1 to 40
+for (i_m in 1:75) { #loop for species 1 to 75
   
   species_list_mesic[i_m] # check what this species is for funsies
   
@@ -556,7 +558,7 @@ Lat1dfm<- data.frame(cbind(y=Lat1m[["y"]],
 
   ggplot(data=df_temp_m, aes(x=year, y=decimalLongitude))+
     geom_point(size = 3.5)+
-     coord_cartesian(xlim = c(1915, 2022), ylim = c(145, 155)) + 
+     coord_cartesian(xlim = c(1945, 2025), ylim = c(145, 155)) + 
     geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2], 
                     linetype=qrpv95m$slope_sig), col = "blue", size = 1)+
     geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2], 
@@ -613,7 +615,7 @@ for(species in spp) {
                                         aes(year, decimalLongitude)) +
     geom_point(size = 3.5)+
     geom_smooth(method = "lm", se = FALSE)+
-    coord_cartesian(xlim = c(1895, 2025), ylim = c(145, 155)) +
+    coord_cartesian(xlim = c(1945, 2025), ylim = c(145, 155)) +
     geom_abline(aes(intercept=coef(quantiles_95)[1], slope=coef(quantiles_95)[2],
                     linetype=qrpv95m$slope_sig), col = "blue", size = 1)+
     geom_abline(aes(intercept=coef(quantiles_05)[1], slope=coef(quantiles_05)[2],
@@ -635,4 +637,37 @@ for(species in spp) {
          file=paste0("Lon_mesic_quantreg", species,".png"),
          width = 20, height = 15, units = "cm", dpi=300)
 }
+```
+Combining all plots into three final plots:
+```{r}
+one <- ggarrange(abae_p, aflo_p, acmac_p, arupi_p,
+                 ator_p, asub_p, arep_p, arup_p,
+                 arob_p, ahar_p, arod_p, bhap_p,
+                 brep_p, bsax_p, basc_p, cbur_p,
+                 cwhi_p, csem_p, dmon_p, daca_p,
+                 eflo_p, ehay_p,ecod_p, einf_p,
+                 nrow = 6, ncol = 4, align = "hv")
+annotate_figure(one, bottom = text_grob("Year", size = 30),
+                left = text_grob("Latitude", size = 30, rot = 90))
+```
+```{r}
+two <- ggarrange(emag_p, eoli_p,eoph_p, ebel_p,
+                 faus_p, gvir_p, ggon_p, gqua_p,
+                 grhi_p, gviri_p, hmac_p, hkap_p,
+                 hlun_p, hram_p, iera_p, imno_p,
+                 jcha_p, kodo_p, lgra_p, lobt_p,
+                 loli_p,lbri_p, mfaw_p, mste_p,
+                 nrow = 6, ncol = 4, align = "hv")
+annotate_figure(two, bottom = text_grob("Year", size = 30),
+                left = text_grob("Latitude", size = 30, rot = 90))
+```
+```{r}
+three <- ggarrange(mtor_p, omoo_p, ovag_p, pade_p,
+                   pruf_p, phab_p, pnot_p, psej_p,
+                   phar_p, ptar_p, rmoo_p, rwhi_p,
+                   saca_p, sbae_p, tyou_p, uaus_p,
+                   zhin_p,
+                 nrow = 6, ncol = 4, align = "hv")
+annotate_figure(three, bottom = text_grob("Year", size = 30),
+                left = text_grob("Latitude", size = 30, rot = 90))
 ```
